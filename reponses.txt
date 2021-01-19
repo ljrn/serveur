@@ -1,0 +1,4 @@
+1) Le client se ferme
+2) Le serveur plante car nc -z n'envoie pas de données
+3) Impossible de se connecter car ::1 est une adresse IPV6 et on ne gère pas encore l'IPV6
+4) Le deuxieme client doit attendre que le serveur ait traité la requete du premier

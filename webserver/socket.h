@@ -6,5 +6,5 @@
 
     La fonction retourne -1 en cas d'erreur ou le descripteur de la
     socket créée. */
-intcreer_serveur(int port);
+int creer_serveur(int port);
 #endif

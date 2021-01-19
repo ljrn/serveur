@@ -3,12 +3,20 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <signal.h>
 #include "socket.h"
+
+void initialiser_signaux(void){
+  if(signal(SIGPIPE, SIG_IGN) == SIG_ERR){
+    perror("signal");
+  }
+}
 
 int main(void){
   int socket_serveur=creer_serveur(8080);
   while(1){
     int socket_client;
+    initialiser_signaux();
     socket_client = accept(socket_serveur, NULL, NULL);
     if(socket_client == -1){
       perror("accept");/* traitement d'erreur */
@@ -21,3 +29,5 @@ int main(void){
   }
   return 0;
 }
+
+

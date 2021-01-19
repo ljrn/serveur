@@ -21,10 +21,14 @@ int main(void){
     if(socket_client == -1){
       perror("accept");/* traitement d'erreur */
     }/* On peut maintenant dialoguer avec le client */
-    const char*message_bienvenue = "Bonjour, bienvenue sur mon serveur\n";
-    for(int i=0; i<10;i++){
-      sleep(1);
-      write(socket_client, message_bienvenue, strlen(message_bienvenue));
+    if(fork()!=0){
+      const char*message_bienvenue = "Bonjour, bienvenue sur mon serveur\n";
+      for(int i=0; i<10;i++){
+	sleep(1);
+	write(socket_client, message_bienvenue, strlen(message_bienvenue));
+      }
+    }else{
+      close(socket_client);
     }
   }
   return 0;

@@ -24,8 +24,10 @@ void initialiser_signaux(void){
   }
 }
 char *renvoie_reponse(int bad){
-  if(bad==1){
+  if(bad==400){
     return "HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 17\r\n\r\n400 Bad request\r\n";
+  }else if(bad==404){
+    return "HTTP/1.1 404 Not Found\r\n";
   }
   return "HTTP/1.1 200 OK\r\nContent-Length: 20\r\n";
 }
@@ -46,23 +48,19 @@ int main(void){
       int nonVide=0;
       int bad = 0;
       while(nonVide!=1 && fgets(buffer, 255, client)!=NULL){
-	printf("boucle");
-	fflush(stdout);
 	if(strcmp(buffer,"\r\n")!=0){
-	  printf("buffer");
-	  fflush(stdout);
-	  char *comp="GET / HTTP/1.1\r\n";
+	  char *err400="GET / HTTP/1.1\r\n";
+	  char *err404="GET /inexistant HTTP/1.1\r\n";
 	  if(ligne==0){
-	    if(strcmp(buffer,comp)!=0){
-	      printf("comp");
-	      fflush(stdout);
-	      bad=1;
+	    if(strcmp(buffer,err404)==0){
+	      bad=404;
+	    }
+	    else if(strcmp(buffer,err400)!=0){
+	      bad=400;
 	    }
 	    ligne++;
 	  }
 	}else{
-	  printf("nonvide");
-	  fflush(stdout);
 	  nonVide=1;
 	}
       }

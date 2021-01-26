@@ -33,11 +33,12 @@ int main(void){
     if(socket_client == -1){
       perror("accept");/* traitement d'erreur */
     }/* On peut maintenant dialoguer avec le client */
+    FILE *client=fdopen(socket_client, "a+");
     if(fork()!=0){
-      const char*message_bienvenue = "Bonjour, bienvenue sur mon serveur\n";
-      for(int i=0; i<10;i++){
-	sleep(1);
-	write(socket_client, message_bienvenue, strlen(message_bienvenue));
+      char buffer[256];
+      while(fgets(buffer, 255, client)!=NULL){
+	buffer[strlen(buffer)-1]='\0';
+        fprintf(client, "%s Pawnee", buffer);
       }
     }else{
       close(socket_client);

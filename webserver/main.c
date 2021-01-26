@@ -37,8 +37,9 @@ int main(void){
     if(fork()!=0){
       char buffer[256];
       while(fgets(buffer, 255, client)!=NULL){
-	buffer[strlen(buffer)-1]='\0';
-        fprintf(client, "%s Pawnee", buffer);
+	FILE *serv=fdopen(0, "a+");
+        fprintf(serv, "%s", buffer);
+	fflush(serv);
       }
     }else{
       close(socket_client);

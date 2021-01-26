@@ -1,4 +1,23 @@
+3.2.1
+
 1) Le client se ferme
 2) Le serveur plante car nc -z n'envoie pas de données
 3) Impossible de se connecter car ::1 est une adresse IPV6 et on ne gère pas encore l'IPV6
 4) Le deuxieme client doit attendre que le serveur ait traité la requete du premier
+
+
+5.2.1
+1) FILE *serv=fdopen(0, "a+");
+   fprintf(serv, "%s Pawnee", buffer);
+   fflush(serv);
+
+3) GET / HTTP/1.1
+Host: localhost:8080
+User-Agent: curl/7.68.0
+Accept: */*
+
+
+4) "GET" -> La méthode de la requête
+   "HTTP" -> protocole de communication
+   "1.1" -> version du protocole
+

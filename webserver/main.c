@@ -23,6 +23,12 @@ void initialiser_signaux(void){
     perror("signal");
   }
 }
+char *renvoie_reponse(int bad){
+  if(bad==1){
+    return "HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 17\r\n\r\n400 Bad request\r\n";
+  }
+  return "HTTP/1.1 200 OK\r\nContent-Length: 20\r\n";
+}
 
 int main(void){
   int socket_serveur=creer_serveur(8080);
@@ -36,11 +42,33 @@ int main(void){
     FILE *client=fdopen(socket_client, "a+");
     if(fork()!=0){
       char buffer[256];
-      while(fgets(buffer, 255, client)!=NULL){
-	FILE *serv=fdopen(0, "a+");
-        fprintf(serv, "%s", buffer);
-	fflush(serv);
+      int ligne=0;
+      int nonVide=0;
+      int bad = 0;
+      while(nonVide!=1 && fgets(buffer, 255, client)!=NULL){
+	printf("boucle");
+	fflush(stdout);
+	if(strcmp(buffer,"\r\n")!=0){
+	  printf("buffer");
+	  fflush(stdout);
+	  char *comp="GET / HTTP/1.1\r\n";
+	  if(ligne==0){
+	    if(strcmp(buffer,comp)!=0){
+	      printf("comp");
+	      fflush(stdout);
+	      bad=1;
+	    }
+	    ligne++;
+	  }
+	}else{
+	  printf("nonvide");
+	  fflush(stdout);
+	  nonVide=1;
+	}
       }
+      char *rep=renvoie_reponse(bad);
+      fprintf(client, "%s\n", rep);
+      fflush(client);
     }else{
       close(socket_client);
     }

@@ -9,6 +9,15 @@
 #include "socket.h"
 #include "http_parse.h"
 
+char *rewrite_target(char *target){
+  int i=0;
+  while(target[i] != '?'){
+    i++;
+  }
+  target[i]='\0';
+  return target;
+}
+
 void traitement_signal(int sig){
   int status;
   waitpid(sig,&status,0);

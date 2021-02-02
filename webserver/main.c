@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <wait.h>
 #include "socket.h"
+#include "http_parse.h"
 
 void traitement_signal(int sig){
   int status;
@@ -25,6 +26,41 @@ void initialiser_signaux(void){
   }
 }
 
+void disconnect_client(FILE *client){
+  shutdown(fileno(client), SHUT_RDWR);
+  fclose(client);
+}
+char *fgets_or_exit(char *buffer, int size, FILE *stream){
+  char *ret = fgets(buffer, size, stream);
+  if (ret == NULL){
+    if (ferror(stream)){
+      perror("fgets");
+      disconnect_client(stream);
+      exit(1);
+    }
+    disconnect_client(stream);
+    exit(0);
+  }
+  return ret;
+}
+void skip_headers(FILE *client){
+  char buffer[256];
+  char *comp=fgets_or_exit(buffer,255,client);
+  while(strcmp(comp,"\r\n")!=0 && strcmp(comp,"\n")!=0){
+    comp=fgets_or_exit(buffer,255,client);
+  }
+  return;
+}
+
+void send_status(FILE *client, int code, const char* reason_phrase){
+  fprintf(client, "HTTP/1.1 %d: %s\r\n",code, reason_phrase);
+  fflush(client);
+}
+void send_response(FILE *client, int code, const char *reason_phrase, const char *message_body){
+  send_status(client, code, reason_phrase);
+  fprintf(client,"Content-Length: %ld", sizeof(message_body));
+  fflush(client);
+}
 char *renvoie_reponse(int bad){
   if(bad==400){
     return "HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 17\r\n\r\n400 Bad request\r\n";
@@ -33,33 +69,9 @@ char *renvoie_reponse(int bad){
   }
   return "HTTP/1.1 200 OK\r\nContent-Length: 20\r\n";
 }
-char *fgets_or_exit(char *buffer, int size, FILE *stream){
-  int ligne=0;
-  int bad = 0;
-  while(fgets(buffer, size-1, stream)!=NULL){
-    if(strcmp(buffer,"\r\n")!=0){
-      char *err400="GET / HTTP/1.1\r\n";
-      char *err404="GET /inexistant HTTP/1.1\r\n";
-      if(ligne==0){
-	if(strcmp(buffer,err404)==0){
-	  bad=404;
-	}
-	else if(strcmp(buffer,err400)!=0){
-	  bad=400;
-	}
-	ligne++;
-      }
-    }else{
-      char *rep=renvoie_reponse(bad);
-      return rep;
-    }
-  }
-  exit(0);
-  return NULL;
-}
 
 int main(void){
-  int socket_serveur=creer_serveur(8080);
+  int socket_serveur=creer_serveur(8081);
   while(1){
     int socket_client;
     initialiser_signaux();
@@ -68,11 +80,22 @@ int main(void){
       perror("accept");
     }
     FILE *client=fdopen(socket_client, "a+");
+    char *motd="Bienvenue à vous\r\n";
     if(fork()!=0){
       char buffer[256];
-      char *rep=fgets_or_exit(buffer,255,client);
-      fprintf(client, "%s\n", rep);
-      fflush(client);
+      http_request request;
+      int rep=parse_http_request(fgets_or_exit(buffer,255,client), &request);
+      if(rep == -1) {
+	if(request.method == HTTP_UNSUPPORTED)
+	  send_response(client, 405, "Method Not Allowed", "Method Not Allowed\r\n");
+	else
+	  send_response(client, 400, "Bad Request", "Bad request\r\n");
+      }else if(strcmp(request.target, "/") == 0)
+	send_response(client, 200, "OK", motd);
+      else
+	send_response(client, 404, "Not Found", "Not Found\r\n");
+      skip_headers(client);
+      disconnect_client(client);
     }else{
       close(socket_client);
     }

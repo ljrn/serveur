@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <wait.h>
+#include <dirent.h>
 #include "socket.h"
 #include "http_parse.h"
 
@@ -17,6 +18,7 @@ char *rewrite_target(char *target){
   target[i]='\0';
   return target;
 }
+FILE *check_and_open(const char*target,const char *document_root){}
 
 void traitement_signal(int sig){
   int status;
@@ -85,8 +87,14 @@ FILE *check_and_open(const char *target,const char *document_root){
   return fopen(chemin,"r");
 }
 
-int main(void){
-  int socket_serveur=creer_serveur(8081);
+
+int main(int argc, char **argv){
+  DIR* directory=fdopendir(argv[argc-1]);
+  if(directory==NULL){
+    perror("Pas un répertoire");
+    exit(1);
+  }
+  int socket_serveur=creer_serveur(8080);
   while(1){
     int socket_client;
     initialiser_signaux();

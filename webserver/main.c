@@ -18,7 +18,6 @@ char *rewrite_target(char *target){
   target[i]='\0';
   return target;
 }
-FILE *check_and_open(const char*target,const char *document_root){}
 
 void traitement_signal(int sig){
   int status;
@@ -86,10 +85,8 @@ FILE *check_and_open(const char *target,const char *document_root){
   strcat(chemin,target);
   return fopen(chemin,"r");
 }
-
-
 int main(int argc, char **argv){
-  DIR* directory=fdopendir(argv[argc-1]);
+  DIR* directory=opendir(argv[argc-1]);
   if(directory==NULL){
     perror("Pas un répertoire");
     exit(1);
@@ -103,20 +100,25 @@ int main(int argc, char **argv){
       perror("accept");
     }
     FILE *client=fdopen(socket_client, "a+");
-    char *motd="Bienvenue à vous\r\n";
     if(fork()!=0){
       char buffer[256];
       http_request request;
       int rep=parse_http_request(fgets_or_exit(buffer,255,client), &request);
+      fprintf(client,"%d", rep);
+      fflush(client);
       if(rep == -1) {
 	if(request.method == HTTP_UNSUPPORTED)
 	  send_response(client, 405, "Method Not Allowed", "Method Not Allowed\r\n");
 	else
 	  send_response(client, 400, "Bad Request", "Bad request\r\n");
-      }else if(strcmp(request.target, "/") == 0)
-	send_response(client, 200, "OK", motd);
-      else
-	send_response(client, 404, "Not Found", "Not Found\r\n");
+      }else{
+	FILE *fichier=check_and_open(request.target,argv[argc-1]);
+	if(fichier==NULL){
+	  send_response(client, 404, "Not Found", "Not Found\r\n");
+	}else{
+	  send_response(client, 200, "OK", "OK\r\n");
+	}
+      }
       skip_headers(client);
       disconnect_client(client);
     }else{

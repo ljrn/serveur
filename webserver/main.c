@@ -105,7 +105,7 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(8081);
+  int socket_serveur=creer_serveur(8002);
   while(1){
     int socket_client;
     initialiser_signaux();
@@ -130,7 +130,7 @@ int main(int argc, char **argv){
 	}else{
 	  int taille=get_file_size(fileno(fichier));
 	  send_response(client, 200, "OK", "OK\r\n");
-	  fprintf(client, "Content-Length: %d\r\n", taille);
+	  fprintf(client, "Content-Length: %d\r\nContent-Type: text/html; charset=utf-8\r\n\r\n", taille);
 	  copy(fichier,client);
 	}
       }

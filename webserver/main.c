@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <wait.h>
 #include <dirent.h>
 #include "socket.h"
@@ -61,6 +62,14 @@ void skip_headers(FILE *client){
   }
   return;
 }
+int get_file_size(int fd){
+  struct stat statbuf;
+  int res=fstat(fd,&statbuf);
+  if(res==-1){
+    perror("stat");
+  }
+  return statbuf.st_size;
+}
 
 void send_status(FILE *client, int code, const char* reason_phrase){
   fprintf(client, "HTTP/1.1 %d: %s\r\n",code, reason_phrase);
@@ -70,14 +79,6 @@ void send_response(FILE *client, int code, const char *reason_phrase, const char
   send_status(client, code, reason_phrase);
   fprintf(client,"Content-Length: %ld", sizeof(message_body));
   fflush(client);
-}
-char *renvoie_reponse(int bad){
-  if(bad==400){
-    return "HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 17\r\n\r\n400 Bad request\r\n";
-  }else if(bad==404){
-    return "HTTP/1.1 404 Not Found\r\n";
-  }
-  return "HTTP/1.1 200 OK\r\nContent-Length: 20\r\n";
 }
 
 FILE *check_and_open(const char *target,const char *document_root){
@@ -103,9 +104,7 @@ int main(int argc, char **argv){
     if(fork()!=0){
       char buffer[256];
       http_request request;
-      int rep=parse_http_request(fgets_or_exit(buffer,255,client), &request);
-      fprintf(client,"%d", rep);
-      fflush(client);
+      int rep=parse_http_request(fgets_or_exit(buffer,255,client),&request);
       if(rep == -1) {
 	if(request.method == HTTP_UNSUPPORTED)
 	  send_response(client, 405, "Method Not Allowed", "Method Not Allowed\r\n");
@@ -116,6 +115,9 @@ int main(int argc, char **argv){
 	if(fichier==NULL){
 	  send_response(client, 404, "Not Found", "Not Found\r\n");
 	}else{
+	  int taille=get_file_size(fileno(fichier));
+	  fprintf(client, "%d",taille);
+	  fflush(client);
 	  send_response(client, 200, "OK", "OK\r\n");
 	}
       }

@@ -75,8 +75,8 @@ int parse_http_request(const char *request_line , http_request *request)
       return -1;
    if (!in_range(version[7], '0', '9')) // minor
       return -1;
-   if (version[8] != '\0') // only support version number with 1 digit for major and 1 digit for minor
-     return -1;
+   /*if (version[8] != '\0') // only support version number with 1 digit for major and 1 digit for minor
+     return -1;*/
    request->http_major = version[5] - '0';
    request->http_minor = version[7] - '0';
    return 0;

@@ -79,6 +79,12 @@ char *renvoie_reponse(int bad){
   return "HTTP/1.1 200 OK\r\nContent-Length: 20\r\n";
 }
 
+FILE *check_and_open(const char *target,const char *document_root){
+  char *chemin = strdup(document_root);
+  strcat(chemin,target);
+  return fopen(chemin,"r");
+}
+
 int main(void){
   int socket_serveur=creer_serveur(8081);
   while(1){

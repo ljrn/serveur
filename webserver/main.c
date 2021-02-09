@@ -86,6 +86,20 @@ FILE *check_and_open(const char *target,const char *document_root){
   strcat(chemin,target);
   return fopen(chemin,"r");
 }
+
+int copy(FILE *in,FILE *out){
+  if(in == NULL || out == NULL){
+    fclose(in);
+    fclose(out);
+    return -1;
+  }
+  char ch;
+   while( ( ch = fgetc(in) ) != EOF )fputc(ch, out);
+   fclose(in);
+   fclose(out);
+   return 0;
+}
+
 int main(int argc, char **argv){
   DIR* directory=opendir(argv[argc-1]);
   if(directory==NULL){

@@ -77,7 +77,7 @@ void send_status(FILE *client, int code, const char* reason_phrase){
 }
 void send_response(FILE *client, int code, const char *reason_phrase, const char *message_body){
   send_status(client, code, reason_phrase);
-  fprintf(client,"Content-Length: %ld", sizeof(message_body));
+  fprintf(client,"%s",message_body);
   fflush(client);
 }
 
@@ -96,7 +96,6 @@ int copy(FILE *in,FILE *out){
   char ch;
    while( ( ch = fgetc(in) ) != EOF )fputc(ch, out);
    fclose(in);
-   fclose(out);
    return 0;
 }
 
@@ -106,7 +105,7 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(8080);
+  int socket_serveur=creer_serveur(8081);
   while(1){
     int socket_client;
     initialiser_signaux();
@@ -130,9 +129,9 @@ int main(int argc, char **argv){
 	  send_response(client, 404, "Not Found", "Not Found\r\n");
 	}else{
 	  int taille=get_file_size(fileno(fichier));
-	  fprintf(client, "%d",taille);
-	  fflush(client);
 	  send_response(client, 200, "OK", "OK\r\n");
+	  fprintf(client, "Content-Length: %d\r\n", taille);
+	  copy(fichier,client);
 	}
       }
       skip_headers(client);

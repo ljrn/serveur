@@ -105,7 +105,7 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(8002);
+  int socket_serveur=creer_serveur(8082);
   while(1){
     int socket_client;
     initialiser_signaux();

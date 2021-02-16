@@ -119,7 +119,6 @@ int main(int argc, char **argv){
   }
   int socket_serveur=creer_serveur(8021);
   init_stats();
-  web_stats *statistiques=get_stats();
   while(1){
     int socket_client;
     initialiser_signaux();
@@ -127,6 +126,7 @@ int main(int argc, char **argv){
     if(socket_client == -1){
       perror("accept");
     }
+    web_stats *statistiques=get_stats();
     FILE *client=fdopen(socket_client, "a+");
     statistiques->served_connections+=1;
     if(fork()!=0){

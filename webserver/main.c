@@ -17,6 +17,7 @@ char *rewrite_target(char *target){
     i++;
   }
   target[i]='\0';
+  if(strcmp("/",target)==0)target = strdup("/index.html");
   return target;
 }
 
@@ -105,7 +106,7 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(8082);
+  int socket_serveur=creer_serveur(8004);
   while(1){
     int socket_client;
     initialiser_signaux();

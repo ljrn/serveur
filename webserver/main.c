@@ -14,10 +14,13 @@
 char *rewrite_target(char *target){
   if(strcmp("/",target)==0)return "/index.html";
   int i=0;
-  while(target[i] != '?'){
+  while(target[i]!='\0' && target[i] != '?'){
     i++;
   }
   target[i]='\0';
+  if(strstr(target,"../")!=NULL){
+    return NULL;
+  }
   return target;
 }
 
@@ -106,7 +109,7 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(8008);
+  int socket_serveur=creer_serveur(8017);
   while(1){
     int socket_client;
     initialiser_signaux();
@@ -121,18 +124,23 @@ int main(int argc, char **argv){
       int rep=parse_http_request(fgets_or_exit(buffer,255,client),&request);
       if(rep == -1) {
 	if(request.method == HTTP_UNSUPPORTED)
-	  send_response(client, 405, "Method Not Allowed", "Method Not Allowed\r\n");
+	  send_response(client, 405, "Method Not Allowed", "\r\n");
 	else
-	  send_response(client, 400, "Bad Request", "Bad request\r\n");
+	  send_response(client, 400, "Bad Request", "\r\n");
       }else{
-	FILE *fichier=check_and_open(rewrite_target(request.target),argv[argc-1]);
-	if(fichier==NULL){
-	  send_response(client, 404, "Not Found", "Not Found\r\n");
+	char *target=rewrite_target(request.target);
+	if(target ==NULL){
+	  send_response(client, 403, "Forbidden", "\r\n");
 	}else{
-	  int taille=get_file_size(fileno(fichier));
-	  send_response(client, 200, "OK", "OK\r\n");
-	  fprintf(client, "Content-Length: %d\r\nContent-Type: text/html; charset=utf-8\r\n\r\n", taille);
-	  copy(fichier,client);
+	  FILE *fichier=check_and_open(target,argv[argc-1]);
+	  if(fichier==NULL){
+	    send_response(client, 404, "Not Found", "\r\n");
+	  }else{
+	    int taille=get_file_size(fileno(fichier));
+	    send_response(client, 200, "OK", "\r\n");
+	    fprintf(client, "Content-Length: %d\r\nContent-Type: text/html; charset=utf-8\r\n\r\n", taille);
+	    copy(fichier,client);
+	  }
 	}
       }
       skip_headers(client);

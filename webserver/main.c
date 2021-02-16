@@ -12,12 +12,12 @@
 #include "http_parse.h"
 
 char *rewrite_target(char *target){
+  if(strcmp("/",target)==0)return "/index.html";
   int i=0;
   while(target[i] != '?'){
     i++;
   }
   target[i]='\0';
-  if(strcmp("/",target)==0)target = strdup("/index.html");
   return target;
 }
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(8004);
+  int socket_serveur=creer_serveur(8008);
   while(1){
     int socket_client;
     initialiser_signaux();
@@ -125,7 +125,7 @@ int main(int argc, char **argv){
 	else
 	  send_response(client, 400, "Bad Request", "Bad request\r\n");
       }else{
-	FILE *fichier=check_and_open(request.target,argv[argc-1]);
+	FILE *fichier=check_and_open(rewrite_target(request.target),argv[argc-1]);
 	if(fichier==NULL){
 	  send_response(client, 404, "Not Found", "Not Found\r\n");
 	}else{

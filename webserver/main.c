@@ -49,17 +49,11 @@ void disconnect_client(FILE *client){
   fclose(client);
 }
 char *fgets_or_exit(char *buffer, int size, FILE *stream){
-  char *ret = fgets(buffer, size, stream);
-  if (ret == NULL){
-    if (ferror(stream)){
-      perror("fgets");
-      disconnect_client(stream);
-      exit(1);
-    }
-    disconnect_client(stream);
-    exit(0);
-  }
-  return ret;
+  if(fgets(buffer, size, stream) == NULL) {
+		exit(0);
+	}
+	return buffer;
+
 }
 void skip_headers(FILE *client){
   char buffer[256];
@@ -119,11 +113,11 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(9008);
+  int socket_serveur=creer_serveur(8000);
   init_stats();
   web_stats *statistiques=get_stats();
-  //sem_t semaphore;
-  //sem_init(&semaphore, 1, 1);
+  sem_t semaphore;
+  sem_init(&semaphore, 1, 1);
   while(1){
     int socket_client;
     initialiser_signaux();
@@ -145,19 +139,19 @@ int main(int argc, char **argv){
 	  printf("405\n");
 	  send_response(client, 405, "Method Not Allowed", "Method Not Allowed\r\n", strlen("Method Not Allowed\r\n"));
 	}else{
-	  //sem_wait(&semaphore);
+	  sem_wait(&semaphore);
 	  statistiques->ko_400+=1;
-	  //sem_post(&semaphore);
+	  sem_post(&semaphore);
 	  printf("400\n");
 	  send_response(client, 400, "Bad Request", "Bad Request\r\n", strlen("Bad Request\r\n"));
 	}
       }else{
 	char *target=rewrite_target(request.target);
 	if(target ==NULL){
-	  //sem_wait(&semaphore);
+	  sem_wait(&semaphore);
 	  statistiques->ko_403+=1;
 	  printf("403\n");
-	  //sem_post(&semaphore);
+	  sem_post(&semaphore);
 	  send_response(client, 403, "Forbidden", "Forbidden\r\n", strlen("Forbidden\r\n"));
 	}else if(strcmp(target,"/stats")==0){
 	  printf("stats\n");
@@ -165,16 +159,16 @@ int main(int argc, char **argv){
 	}else{
 	  FILE *fichier=check_and_open(target,argv[argc-1]);
 	  if(fichier==NULL){
-	    //sem_wait(&semaphore);
+	    sem_wait(&semaphore);
 	    statistiques->ko_404+=1;
-	    //sem_post(&semaphore);
+	    sem_post(&semaphore);
 	    printf("404\n");
 	    send_response(client, 404, "Not Found", "Not Found\r\n", strlen("Not Found"));
 	  }else{
 	    int taille=get_file_size(fileno(fichier));
-	    //sem_wait(&semaphore);
+	    sem_wait(&semaphore);
 	    statistiques->ok_200+=1;
-	    //sem_post(&semaphore);
+	    sem_post(&semaphore);
 	    printf("200\n");
 	    send_response(client, 200, "OK", "", taille);
 	    copy(fichier,client);

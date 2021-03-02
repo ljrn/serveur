@@ -19,7 +19,7 @@ char *rewrite_target(char *target){
     i++;
   }
   target[i]='\0';
-  if(strstr(target,"../")!=NULL){
+ if(strstr(target,"../")!=NULL){
     return NULL;
   }
   return target;
@@ -117,8 +117,9 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(8021);
+  int socket_serveur=creer_serveur(9001);
   init_stats();
+  web_stats *statistiques=get_stats();
   while(1){
     int socket_client;
     initialiser_signaux();
@@ -126,7 +127,6 @@ int main(int argc, char **argv){
     if(socket_client == -1){
       perror("accept");
     }
-    web_stats *statistiques=get_stats();
     FILE *client=fdopen(socket_client, "a+");
     statistiques->served_connections+=1;
     if(fork()!=0){
@@ -171,4 +171,4 @@ int main(int argc, char **argv){
   return 0;
 }
 
-
+  

@@ -11,6 +11,8 @@
 #include "socket.h"
 #include "http_parse.h"
 #include "stats.h"
+#include <semaphore.h>
+#include <pthread.h>
 
 char *rewrite_target(char *target){
   if(strcmp("/",target)==0)return "/index.html";
@@ -80,8 +82,9 @@ void send_status(FILE *client, int code, const char* reason_phrase){
   fprintf(client, "HTTP/1.1 %d: %s\r\n",code, reason_phrase);
   fflush(client);
 }
-void send_response(FILE *client, int code, const char *reason_phrase, const char *message_body){
+void send_response(FILE *client, int code, const char *reason_phrase, const char *message_body, int length){
   send_status(client, code, reason_phrase);
+  fprintf(client, "Content-Length: %d\r\nContent-Type: text/html; charset=utf-8\r\n\r\n", length);
   fprintf(client,"%s",message_body);
   fflush(client);
 }
@@ -106,8 +109,7 @@ int copy(FILE *in,FILE *out){
 
 void send_stats(FILE *client){
   web_stats *stat=get_stats();
-  send_response(client, 200, "OK", "OK\r\n");
-  fprintf(client, "Content-Length: %ld\r\nContent-Type: text/html; charset=utf-8\r\n\r\n",sizeof(*stat)+62);
+  send_response(client, 200, "OK", "", sizeof(*stat)+62);
   fprintf(client, "Served Connections: %d\r\nServed Requests: %d\r\nOK 200: %d\r\nKO 400:%d\r\nKO 403: %d\r\nKO 404: %d\r\n", stat->served_connections, stat->served_requests,stat->ok_200,stat->ko_400,stat->ko_403, stat->ko_404);
 }
 
@@ -117,9 +119,11 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(9001);
+  int socket_serveur=creer_serveur(9008);
   init_stats();
   web_stats *statistiques=get_stats();
+  //sem_t semaphore;
+  //sem_init(&semaphore, 1, 1);
   while(1){
     int socket_client;
     initialiser_signaux();
@@ -128,36 +132,51 @@ int main(int argc, char **argv){
       perror("accept");
     }
     FILE *client=fdopen(socket_client, "a+");
+    printf("nouveau client\n");
     statistiques->served_connections+=1;
     if(fork()!=0){
+      printf("nouvelle requête\n");
       statistiques->served_requests+=1;
       char buffer[256];
       http_request request;
       int rep=parse_http_request(fgets_or_exit(buffer,255,client),&request);
       if(rep == -1) {
 	if(request.method == HTTP_UNSUPPORTED){
-	  send_response(client, 405, "Method Not Allowed", "Method Not Allowed\r\n");
+	  printf("405\n");
+	  send_response(client, 405, "Method Not Allowed", "Method Not Allowed\r\n", strlen("Method Not Allowed\r\n"));
 	}else{
+	  //sem_wait(&semaphore);
 	  statistiques->ko_400+=1;
-	  send_response(client, 400, "Bad Request", "Bad Request\r\n");
+	  //sem_post(&semaphore);
+	  printf("400\n");
+	  send_response(client, 400, "Bad Request", "Bad Request\r\n", strlen("Bad Request\r\n"));
 	}
       }else{
 	char *target=rewrite_target(request.target);
 	if(target ==NULL){
+	  //sem_wait(&semaphore);
 	  statistiques->ko_403+=1;
-	  send_response(client, 403, "Forbidden", "Forbidden\r\n");
+	  printf("403\n");
+	  //sem_post(&semaphore);
+	  send_response(client, 403, "Forbidden", "Forbidden\r\n", strlen("Forbidden\r\n"));
 	}else if(strcmp(target,"/stats")==0){
+	  printf("stats\n");
 	  send_stats(client);
 	}else{
 	  FILE *fichier=check_and_open(target,argv[argc-1]);
 	  if(fichier==NULL){
+	    //sem_wait(&semaphore);
 	    statistiques->ko_404+=1;
-	    send_response(client, 404, "Not Found", "Not Found\r\n");
+	    //sem_post(&semaphore);
+	    printf("404\n");
+	    send_response(client, 404, "Not Found", "Not Found\r\n", strlen("Not Found"));
 	  }else{
 	    int taille=get_file_size(fileno(fichier));
+	    //sem_wait(&semaphore);
 	    statistiques->ok_200+=1;
-	    send_response(client, 200, "OK", "OK\r\n");
-	    fprintf(client, "Content-Length: %d\r\nContent-Type: text/html; charset=utf-8\r\n\r\n", taille);
+	    //sem_post(&semaphore);
+	    printf("200\n");
+	    send_response(client, 200, "OK", "", taille);
 	    copy(fichier,client);
 	  }
 	}

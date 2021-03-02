@@ -3,7 +3,7 @@
 CC=gcc
 LD=gcc
 CFLAGS=-Wall -W -Werror
-LDFLAGS=
+LDFLAGS=-lpthread
 
 # Le nom de l'exécutable à fabriquer
 EXE=pawnee

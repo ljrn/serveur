@@ -83,23 +83,33 @@ void send_response(FILE *client, int code, const char *reason_phrase, const char
   fflush(client);
 }
 
-FILE *check_and_open(const char *target,const char *document_root){
-  char *chemin = strdup(document_root);
-  strcat(chemin,target);
-  return fopen(chemin,"r");
+FILE *check_and_open(const char *target, const char *document_root)
+{
+	char * chemin = malloc(sizeof(target)+sizeof(document_root)+128);
+	strcpy(chemin, document_root);
+	strcat(chemin, target);
+	printf("%s\n",chemin);
+	FILE *f;
+	f = fopen(chemin, "rb+");
+	free(chemin);
+	if(f == NULL) {
+		perror("erreur d'ouverture du fichier");
+		return NULL;
+	}
+	return f;
+
 }
 
-int copy(FILE *in,FILE *out){
-  if(in == NULL || out == NULL){
-    fclose(in);
-    fclose(out);
-    return -1;
-  }
-  char ch;
-   while( ( ch = fgetc(in) ) != EOF )fputc(ch, out);
-   fclose(in);
-   return 0;
+
+int copy(FILE *in, FILE *out)
+{
+	char c;
+	while(fread(&c, 1, 1, in) == 1) {
+		fwrite(&c, 1, 1, out);
+	}
+	return 0;
 }
+
 
 void send_stats(FILE *client){
   web_stats *stat=get_stats();
@@ -140,6 +150,7 @@ int main(int argc, char **argv){
       char buffer[256];
       http_request request;
       int rep=parse_http_request(fgets_or_exit(buffer,255,client),&request);
+	 printf("rep\n");
       if(rep == -1) {
 	if(request.method == HTTP_UNSUPPORTED){
 	  printf("405\n");

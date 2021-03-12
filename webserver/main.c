@@ -14,6 +14,7 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+web_stats *statistiques;
 char *rewrite_target(char *target){
   if(strcmp("/",target)==0)return "/index.html";
   int i=0;
@@ -53,15 +54,14 @@ char *fgets_or_exit(char *buffer, int size, FILE *stream){
 		exit(0);
 	}
 	return buffer;
-
 }
 void skip_headers(FILE *client){
   char buffer[256];
-  char *comp=fgets_or_exit(buffer,255,client);
-  while(strcmp(comp,"\r\n")!=0 && strcmp(comp,"\n")!=0){
-    comp=fgets_or_exit(buffer,255,client);
+  while(strcmp(buffer,"\r\n")!=0 && strcmp(buffer,"\n")!=0){
+    if(fgets(buffer,255,client)==NULL){
+      exit(0);
+    }
   }
-  return;
 }
 int get_file_size(int fd){
   struct stat statbuf;
@@ -103,8 +103,10 @@ int copy(FILE *in,FILE *out){
 
 void send_stats(FILE *client){
   web_stats *stat=get_stats();
-  send_response(client, 200, "OK", "", sizeof(*stat)+62);
-  fprintf(client, "Served Connections: %d\r\nServed Requests: %d\r\nOK 200: %d\r\nKO 400:%d\r\nKO 403: %d\r\nKO 404: %d\r\n", stat->served_connections, stat->served_requests,stat->ok_200,stat->ko_400,stat->ko_403, stat->ko_404);
+  char chaine[1000];
+  sprintf(chaine,"Served Connections: %d\r\nServed Requests: %d\r\nOK 200: %d\r\nKO 400:%d\r\nKO 403: %d\r\nKO 404: %d\r\n", stat->served_connections, stat->served_requests,stat->ok_200,stat->ko_400,stat->ko_403, stat->ko_404);
+  send_response(client, 200, "OK", "", strlen(chaine));
+  fprintf(client,"%s", chaine);
 }
 
 int main(int argc, char **argv){
@@ -113,24 +115,28 @@ int main(int argc, char **argv){
     perror("Pas un répertoire");
     exit(1);
   }
-  int socket_serveur=creer_serveur(8000);
+  int socket_serveur=creer_serveur(8004);
   init_stats();
-  web_stats *statistiques=get_stats();
+  statistiques=get_stats();
   sem_t semaphore;
   sem_init(&semaphore, 1, 1);
+  initialiser_signaux();
   while(1){
     int socket_client;
-    initialiser_signaux();
     socket_client = accept(socket_serveur, NULL, NULL);
     if(socket_client == -1){
       perror("accept");
     }
     FILE *client=fdopen(socket_client, "a+");
     printf("nouveau client\n");
+    sem_wait(&semaphore);
     statistiques->served_connections+=1;
-    if(fork()!=0){
+    sem_post(&semaphore);
+    if(fork()==0){
       printf("nouvelle requête\n");
+      sem_wait(&semaphore);
       statistiques->served_requests+=1;
+      sem_post(&semaphore);
       char buffer[256];
       http_request request;
       int rep=parse_http_request(fgets_or_exit(buffer,255,client),&request);
@@ -150,8 +156,8 @@ int main(int argc, char **argv){
 	if(target ==NULL){
 	  sem_wait(&semaphore);
 	  statistiques->ko_403+=1;
-	  printf("403\n");
 	  sem_post(&semaphore);
+	  printf("403\n");
 	  send_response(client, 403, "Forbidden", "Forbidden\r\n", strlen("Forbidden\r\n"));
 	}else if(strcmp(target,"/stats")==0){
 	  printf("stats\n");
@@ -169,17 +175,15 @@ int main(int argc, char **argv){
 	    sem_wait(&semaphore);
 	    statistiques->ok_200+=1;
 	    sem_post(&semaphore);
-	    printf("200\n");
+	    printf("%d\n", statistiques->ok_200);
 	    send_response(client, 200, "OK", "", taille);
 	    copy(fichier,client);
 	  }
 	}
       }
       skip_headers(client);
-      disconnect_client(client);
-    }else{
-      close(socket_client);
     }
+    fclose(client);
   }
   return 0;
 }

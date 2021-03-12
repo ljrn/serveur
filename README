@@ -1,0 +1,24 @@
+Arborescence du projet :
+
+ |-- ./
+    |-- ./webserver
+       |-- Makefile
+       |-- main.c
+       |-- socket.c
+       |-- socket.h
+       |-- stats.c
+       |-- stats.h
+       |-- http_parse.c
+       |-- http_parse.h
+       |-- index.html
+
+Compilation : 
+
+    1- Se trouver dans le répertoire webserver
+    2- Executer la commande make
+
+Execution : 
+
+    1- Se trouver dans le répertoire webserver
+    2- Executer la commande ./pawnee [chemin_contexte]
+
